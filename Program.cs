@@ -1,56 +1,74 @@
-﻿// Непрілий Маркіян ПМІ-25
-// Модуль 15.03
-// Варіант 3
-using System;
-class Matrix
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+public interface ITransaction
 {
-    private int[][] data;
-    public Matrix(int rows, int columns)    
+    void PerformTransaction();
+}
+
+
+public class Transaction
+{
+    public decimal Amount { get; set; }
+    public DateTime TransactionDate { get; set; }
+
+    public Transaction(decimal amount, DateTime transactionDate)
     {
-        data = new int[rows][];        
-        for (int i = 0; i < rows; i++)
-        {            
-            data[i] = new int[columns];
-        }    
-    }
-    public int this[int row, int column]
-    {        
-        get { return data[row][column]; }
-        set { data[row][column] = value; }    
-    }
-    
-    public void FillMatrixRandom(int rows, int columns, int min, int max)
-    {        Random random = new Random();
-        for (int i = 0; i < rows; i++) 
-            {
-            for (int j = 0; j < columns; j++)            
-            {
-                data[i][j] = random.Next(min, max + 1);            
-            }
-        }    
-    }
-    public void PrintMatrix()
-    {        
-        for (int i = 0; i < data.Length; i++)
-        {            
-            for (int j = 0; j < data[i].Length; j++)
-            {                
-                Console.Write(data[i][j] + " ");
-            }            
-            Console.WriteLine();
-        }    
+        Amount = amount;
+        TransactionDate = transactionDate;
     }
 }
-class Program{
-    static void Main(string[] args)    
-    {
-        Matrix matrix = new Matrix(3, 3);        
-        matrix.FillMatrixRandom(3, 3, 1, 10);
-        Console.WriteLine("Generated Matrix:");        
-        matrix.PrintMatrix();
 
-        int row = 1;        
-        int column = 2;
-        Console.WriteLine($"Value at ({row}, {column}): {matrix[row, column]}");    
+public class FinancialTransaction : Transaction, ITransaction
+{
+    public FinancialTransaction(decimal amount, DateTime transactionDate) 
+        : base(amount, transactionDate)
+    {
+
+    }
+
+    public void PerformTransaction()
+    {
+        Console.WriteLine($"Performing transaction of {Amount} at {TransactionDate}");
+    }
+}
+
+public class TransactionException : Exception
+{
+    public TransactionException(string message) : base(message)
+    {
+        Console.WriteLine(message);
+    }
+}
+
+public class TransactionProcessor
+{
+    public event EventHandler<string> TransactionCompleted;
+
+    public void ProcessTransaction(ITransaction transaction)
+    {
+        try
+        {
+            transaction.PerformTransaction();
+            TransactionCompleted?.Invoke(this, "Transaction successful.");
+        }
+        catch (Exception ex)
+        {
+            TransactionCompleted?.Invoke(this, $"Transaction failed: {ex.Message}");
+        }
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        FinancialTransaction transaction = new FinancialTransaction(100, DateTime.Now);
+        TransactionProcessor processor = new TransactionProcessor();
+        processor.TransactionCompleted += (sender, message) => Console.WriteLine(message);
+        processor.ProcessTransaction(transaction);
     }
 }
