@@ -1,64 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Xml.Serialization;
 
-public interface ITransaction
+[Serializable]
+public class Book
 {
-    void PerformTransaction();
-}
+    public string Title { get; set; }
+    public string Author { get; set; }
+    public int Year { get; set; }
 
+    public Book() { }
 
-public class Transaction
-{
-    public decimal Amount { get; set; }
-    public DateTime TransactionDate { get; set; }
-
-    public Transaction(decimal amount, DateTime transactionDate)
+    public Book(string title, string author, int year)
     {
-        Amount = amount;
-        TransactionDate = transactionDate;
-    }
-}
-
-public class FinancialTransaction : Transaction, ITransaction
-{
-    public FinancialTransaction(decimal amount, DateTime transactionDate) 
-        : base(amount, transactionDate)
-    {
-
-    }
-
-    public void PerformTransaction()
-    {
-        Console.WriteLine($"Performing transaction of {Amount} at {TransactionDate}");
-    }
-}
-
-public class TransactionException : Exception
-{
-    public TransactionException(string message) : base(message)
-    {
-        Console.WriteLine(message);
-    }
-}
-
-public class TransactionProcessor
-{
-    public event EventHandler<string> TransactionCompleted;
-
-    public void ProcessTransaction(ITransaction transaction)
-    {
-        try
-        {
-            transaction.PerformTransaction();
-            TransactionCompleted?.Invoke(this, "Transaction successful.");
-        }
-        catch (Exception ex)
-        {
-            TransactionCompleted?.Invoke(this, $"Transaction failed: {ex.Message}");
-        }
+        Title = title;
+        Author = author;
+        Year = year;
     }
 }
 
@@ -66,9 +25,44 @@ class Program
 {
     static void Main(string[] args)
     {
-        FinancialTransaction transaction = new FinancialTransaction(100, DateTime.Now);
-        TransactionProcessor processor = new TransactionProcessor();
-        processor.TransactionCompleted += (sender, message) => Console.WriteLine(message);
-        processor.ProcessTransaction(transaction);
+        List<Book> books = DeserializeBooks();
+        SortBooksByYearUsingLINQ(books);
+        SerializeBooks(books);
+        WriteBooksToTextFile(books);
+    }
+
+    static List<Book> DeserializeBooks()
+    {
+        XmlSerializer deserializer = new XmlSerializer(typeof(List<Book>));
+        using (FileStream stream = new FileStream("input.xml", FileMode.Open))
+        {
+            List<Book> desBooks = deserializer.Deserialize(stream) as List<Book>;
+            return desBooks;
+        }
+    }
+
+    static void SerializeBooks(List<Book> books)
+    {
+        XmlSerializer serializer = new XmlSerializer(typeof(List<Book>));
+        using (FileStream stream = new FileStream("sorted_books.xml", FileMode.Create))
+        {
+            serializer.Serialize(stream, books);
+        }
+    }
+
+    static void SortBooksByYearUsingLINQ(List<Book> books)
+    {
+        books = books.OrderBy(book => book.Year).ToList();
+    }
+
+    static void WriteBooksToTextFile(List<Book> books)
+    {
+        using (StreamWriter writer = new StreamWriter("books.txt"))
+        {
+            foreach (Book book in books)
+            {
+                writer.WriteLine($"Title: {book.Title} Author: {book.Author} Year: {book.Year}");
+            }
+        }
     }
 }
